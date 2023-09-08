@@ -156,7 +156,7 @@ static term nif_ulp_write_memory(Context* ctx, int argc, term argv[])
     UNUSED(argc);
     VALIDATE_VALUE(argv[0], term_is_integer);
     VALIDATE_VALUE(argv[1], term_is_any_integer);
-    avm_int_t offset = term_from_int(argv[0]);
+    avm_int_t offset = term_to_int(argv[0]);
     if (UNLIKELY(offset < 0 || offset * 4 >= CONFIG_ULP_COPROC_RESERVE_MEM)) {
         RAISE_ERROR(BADARG_ATOM);
     }
