@@ -20,7 +20,7 @@ Install a button between GPIO 0 and GND.
 Installation
 ------------
 
-- Compile and install AtomVM with `atomvm_ulp` as explained [here](../../../README.md)
+- Compile and install AtomVM with `atomvm_ulp` as explained [here](../../README.md)
 - Install rebar3
 - Compile and flash with:
 

@@ -18,7 +18,7 @@ Install a LED between GPIO 0 and GND. It is preferrable to add a resistor.
 Installation
 ------------
 
-- Compile and install AtomVM with `atomvm_ulp` as explained [here](../../../README.md)
+- Compile and install AtomVM with `atomvm_ulp` as explained [here](../../README.md)
 - Install rebar3
 - Compile and flash with:
 
