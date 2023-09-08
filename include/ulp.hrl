@@ -320,3 +320,26 @@
 -define(I_JUMPS_GT(PCOffset, Imm),
     ?I_JUMPS(PCOffset, (Imm + 1), ?JUMPS_GE)
 ).
+
+% 30.4.4 JUMP – Jump to an Absolute Address
+-define(I_JUMP(Rdst, Imm, Sel, Type),
+    <<(Imm band 2#111111):6, Rdst:2, 0:3, (Imm bsr 6):5, (Type band 2#11):2, Sel:1, 0:5, ?OPCODE_BRANCH:4, ?SUB_OPCODE_BX:3, (Type bsr 2):1>>
+).
+-define(I_BXR(Rdst),
+    ?I_JUMP(Rdst, 0, ?SUB_OPCODE_B, ?BX_JUMP_TYPE_DIRECT)
+).
+-define(I_BXI(Imm),
+    ?I_JUMP(0, Imm, 0, ?BX_JUMP_TYPE_DIRECT)
+).
+-define(I_BXZR(Rdst),
+    ?I_JUMP(Rdst, 0, ?SUB_OPCODE_B, ?BX_JUMP_TYPE_ZERO)
+).
+-define(I_BXZI(Imm),
+    ?I_JUMP(0, Imm, 0, ?BX_JUMP_TYPE_ZERO)
+).
+-define(I_BXFR(Rdst),
+    ?I_JUMP(Rdst, 0, ?SUB_OPCODE_B, ?BX_JUMP_TYPE_OVF)
+).
+-define(I_BXFI(Imm),
+    ?I_JUMP(0, Imm, 0, ?BX_JUMP_TYPE_OVF)
+).
