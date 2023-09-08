@@ -15,24 +15,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
 #
-.eunit
-*.o
-*.beam
-*.plt
-erl_crash.dump
-.concrete/DEV_MODE
+menu "AtomVM ULP Configuration"
 
-# rebar 2.x
-.rebar
-rel/example_project
-ebin/*.beam
-deps
+config AVM_ENABLE_ULP_NIFS
+    bool "Enable ULP NIFs"
+    default y
+	help
+		Use this parameter to enable or disable the AtomVM ULP driver.
 
-# rebar 3
-.rebar3
-_build/
-_checkouts/
-rebar3.crashdump
+config AVM_ENABLE_RTC_GPIO_NIFS
+    bool "Enable RTC GPIO NIFs"
+    default y
+	help
+		Use this parameter to enable or disable the AtomVM RTC GPIO driver.
 
-# For this project, we don't need to check in rebar.lock
-rebar.lock
+endmenu
