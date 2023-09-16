@@ -152,6 +152,14 @@
         ?RTC_GPIO_OUT_REG, (RTC_GPIO + ?RTC_GPIO_OUT_SHIFT), (RTC_GPIO + ?RTC_GPIO_OUT_SHIFT), Level
     )
 ).
+-define(I_WR_RTC_GPIO_ENABLE(RTC_GPIO, OutEnable),
+    ?I_WR_REG_RTC_IO(
+        ?RTC_GPIO_ENABLE_REG,
+        (RTC_GPIO + ?RTC_GPIO_ENABLE_SHIFT),
+        (RTC_GPIO + ?RTC_GPIO_ENABLE_SHIFT),
+        OutEnable
+    )
+).
 -define(I_WR_SENS_PC_INIT_LOW(PC),
     ?I_WR_REG_SENS(
         ?SENS_SAR_START_FORCE_REG, ?SENS_PC_INIT_LOW, ?SENS_PC_INIT_LOW + 7, (PC band 16#FF)
@@ -322,9 +330,18 @@
 ).
 
 % 30.4.4 JUMP – Jump to an Absolute Address
--define(I_JUMP(Rdst, Imm, Sel, Type),
-    <<(Imm band 2#111111):6, Rdst:2, 0:3, (Imm bsr 6):5, (Type band 2#11):2, Sel:1, 0:5, ?OPCODE_BRANCH:4, ?SUB_OPCODE_BX:3, (Type bsr 2):1>>
-).
+-define(I_JUMP(Rdst, Imm, Sel, Type), <<
+    (Imm band 2#111111):6,
+    Rdst:2,
+    0:3,
+    (Imm bsr 6):5,
+    (Type band 2#11):2,
+    Sel:1,
+    0:5,
+    ?OPCODE_BRANCH:4,
+    ?SUB_OPCODE_BX:3,
+    (Type bsr 2):1
+>>).
 -define(I_BXR(Rdst),
     ?I_JUMP(Rdst, 0, ?SUB_OPCODE_B, ?BX_JUMP_TYPE_DIRECT)
 ).

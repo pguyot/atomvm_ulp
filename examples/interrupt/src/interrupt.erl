@@ -42,7 +42,7 @@ start() ->
         end,
     if
         InstallULP ->
-            ULPBinary = ulp:compile([
+            {ULPBinary, _Labels} = ulp:compile([
                 % Read button
                 ?I_RD_RTC_GPIO(?RTC_GPIO_BUTTON),
                 % pin is pulled-up, halt without interrupt/wake if it's not down

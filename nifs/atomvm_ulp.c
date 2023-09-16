@@ -16,11 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0 OR LGPL-2.1-or-later
  */
 
+#include <esp_idf_version.h>
 #include <sdkconfig.h>
+
 #ifdef CONFIG_AVM_ENABLE_ULP_NIFS
 
 #ifndef CONFIG_ESP32_ULP_COPROC_ENABLED
 #error ULP coprocessor needs to be enabled with menuconfig
+#endif
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
+#error AtomVM ULP driver requires esp-idf SDK 5.0 or higher
 #endif
 
 #include <stdlib.h>

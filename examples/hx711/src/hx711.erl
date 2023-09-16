@@ -53,15 +53,20 @@ start() ->
 
 setup() ->
     io:format("Running setup\n"),
-    ULPBinary = ulp:compile([
+    {ULPBinary, Labels} = ulp:compile([
         % read value: high bits
+        {label, read_high},
         <<0:32>>,
         % read value: low bits
+        {label, read_low},
         <<0:32>>,
         % threshold value: high bits
+        {label, threshold_high},
         <<0:32>>,
         % threshold value: low bits
+        {label, threshold_low},
         <<0:32>>,
+        {label, start},
         ?I_MOVI(2, 0),
         % wait for the hx711 to be ready
         ?I_WR_RTC_GPIO(?RTC_GPIO_HX711_CLK, 0),
@@ -127,21 +132,28 @@ setup() ->
     rtc_gpio:set_direction(?GPIO_HX711_DAT, input_only),
     rtc_gpio:set_level(?GPIO_HX711_DAT, low),
     io:format("Make sure nothing is on the scale\n"),
-    Tare = measure_avg_loop(5),
+    #{
+        read_high := ReadHighAddr,
+        read_low := ReadLowAddr,
+        threshold_high := ThresholdHighAddr,
+        threshold_low := ThresholdLowAddr,
+        start := Start
+    } = Labels,
+    Tare = measure_avg_loop(5, ReadHighAddr, ReadLowAddr),
     io:format("Tare: ~B\n", [Tare]),
     io:format("Put an object on the scale now (waiting for 5 secs)\n"),
     timer:sleep(5000),
-    MeasureObj = measure_avg_loop(5),
+    MeasureObj = measure_avg_loop(5, ReadHighAddr, ReadLowAddr),
     io:format("Object: ~B\n", [MeasureObj]),
     io:format("Remove the object (waiting for 5 secs)\n"),
     timer:sleep(5000),
     Threshold = (Tare + MeasureObj) div 2,
     io:format("Treshold = ~B\n", [Threshold]),
-    ulp:write_memory(2, Threshold bsr 16),
-    ulp:write_memory(3, Threshold band 16#FFFF),
+    ulp:write_memory(ThresholdHighAddr, Threshold bsr 16),
+    ulp:write_memory(ThresholdLowAddr, Threshold band 16#FFFF),
     % Measure every 200ms
     ulp:set_wakeup_period(0, 200000),
-    ulp:run(4),
+    ulp:run(Start),
     do_deep_sleep().
 
 do_deep_sleep() ->
@@ -149,24 +161,24 @@ do_deep_sleep() ->
     io:format("Deep sleeping until object is put on scale using threshold\n"),
     esp:deep_sleep().
 
-measure_avg_loop(N) ->
-    measure_avg_loop(N, 0, 0).
+measure_avg_loop(N, ReadHighAddr, ReadLowAddr) ->
+    measure_avg_loop(N, 0, 0, ReadHighAddr, ReadLowAddr).
 
-measure_avg_loop(0, Count, Sum) ->
+measure_avg_loop(0, Count, Sum, _ReadHighAddr, _ReadLowAddr) ->
     round(Sum / Count);
-measure_avg_loop(Remaining, Count, Sum) ->
-    Value = measure(),
+measure_avg_loop(Remaining, Count, Sum, ReadHighAddr, ReadLowAddr) ->
+    Value = measure(ReadHighAddr, ReadLowAddr),
     measure_avg_loop(Remaining - 1, Count + 1, Sum + Value).
 
-measure() ->
+measure(ReadHighAddr, ReadLowAddr) ->
     {ok, {Handler, Ref}} = ulp:isr_register(),
     ulp:run(4),
     receive
         {ulp, Ref} ->
             true = ulp:isr_deregister(Handler),
-            Mem0 = ulp:read_memory(0),
+            Mem0 = ulp:read_memory(ReadHighAddr),
             Val0 = Mem0 band 16#FFFF,
-            Mem1 = ulp:read_memory(1),
+            Mem1 = ulp:read_memory(ReadLowAddr),
             Val1 = Mem1 band 16#FFFF,
             Val = Val0 bsl 16 + Val1,
             Val

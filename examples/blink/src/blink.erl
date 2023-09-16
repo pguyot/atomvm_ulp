@@ -24,7 +24,7 @@
 -define(RTC_GPIO_LED, 11).
 
 start() ->
-    ULPBinary = ulp:compile([
+    {ULPBinary, _Labels} = ulp:compile([
         % @loop
         % Turn led on
         ?I_WR_RTC_GPIO(?RTC_GPIO_LED, 1),

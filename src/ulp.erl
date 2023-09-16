@@ -37,14 +37,28 @@
     isr_handler/0
 ]).
 
+-include_lib("atomvm_ulp/include/ulp.hrl").
+
 -opaque isr_handler() :: binary().
 
 %% Offset must be within CONFIG_ULP_COPROC_RESERVE_MEM which is at most 8KB
 %% It is expressed in words
 -type offset() :: 0..2047.
 
-%% Instructions are 32 bits binaries
--type instruction() :: <<_:32>>.
+-type register() :: 0..3.
+
+%% Instructions are 32 bits binaries (generated from macros) or labels/
+%% references to labels
+-type instruction() ::
+    <<_:32>>
+    | {label, atom()}
+    | {bxi, Address :: offset() | atom()}
+    | {bxzi, Address :: offset() | atom()}
+    | {bxfi, Address :: offset() | atom()}
+    | {movi, register(), Value :: offset() | atom()}
+    | {jumps_lt, RelativeAddress :: offset() | atom(), Imm :: 0..255}
+    | {jumpr_ge, RelativeAddress :: offset() | atom(), Imm :: 0..65535}
+    | {jumpr_lt, RelativeAddress :: offset() | atom(), Imm :: 0..65535}.
 
 %% Magic beginning of ULP binaries
 -define(MAGIC, 16#00706c75).
@@ -130,14 +144,84 @@ set_wakeup_period(_PeriodIndex, _PeriodUS) ->
 
 %% @doc Compile and link instructions to a binary suitable for `load_binary/1,2'
 %% @param Instructions instructions to compile, a list of binaries generated
-%%        with macros
-%% @returns A compiled binary
+%%        with macros or labels/references to labels.
+%% @returns A compiled binary and a map with labels.
 -spec compile([instruction()]) -> binary().
 compile(Instructions) ->
-    TextBin = list_to_binary(Instructions),
+    Labels = parse_labels(Instructions, 0, #{}),
+    TextBin = compile0(Instructions, 0, [], Labels),
     % For now we don't determine which address are accessed and should be
     % declared as data/bss
-    link(TextBin, <<>>, 0).
+    LinkedBinary = link(TextBin, <<>>, 0),
+    {LinkedBinary, Labels}.
+
+parse_labels([], _PC, AccLabels) ->
+    AccLabels;
+parse_labels([{label, Label} | Tail], PC, AccLabels) ->
+    NewAccLabels = AccLabels#{Label => PC},
+    parse_labels(Tail, PC, NewAccLabels);
+parse_labels([_Instruction | Tail], PC, AccLabels) ->
+    parse_labels(Tail, PC + 1, AccLabels).
+
+compile0([], _PC, Acc, _Labels) ->
+    list_to_binary(lists:reverse(Acc));
+compile0([{label, _} | Tail], PC, Acc, Labels) ->
+    compile0(Tail, PC, Acc, Labels);
+compile0([Instruction | Tail], PC, Acc, Labels) when is_binary(Instruction) ->
+    compile0(Tail, PC + 1, [Instruction | Acc], Labels);
+compile0([InstructionTuple | Tail], PC, Acc, Labels) when is_tuple(InstructionTuple) ->
+    Instruction = compile_instruction(InstructionTuple, PC, Labels),
+    compile0(Tail, PC + 1, [Instruction | Acc], Labels).
+
+compile_instruction({bxi, Target}, _PC, Labels) ->
+    TargetVal =
+        if
+            is_integer(Target) -> Target;
+            is_atom(Target) -> maps:get(Target, Labels)
+        end,
+    ?I_BXI(TargetVal);
+compile_instruction({bxzi, Target}, _PC, Labels) ->
+    TargetVal =
+        if
+            is_integer(Target) -> Target;
+            is_atom(Target) -> maps:get(Target, Labels)
+        end,
+    ?I_BXZI(TargetVal);
+compile_instruction({bxfi, Target}, _PC, Labels) ->
+    TargetVal =
+        if
+            is_integer(Target) -> Target;
+            is_atom(Target) -> maps:get(Target, Labels)
+        end,
+    ?I_BXFI(TargetVal);
+compile_instruction({movi, Register, Value}, _PC, Labels) ->
+    ValueVal =
+        if
+            is_integer(Value) -> Value;
+            is_atom(Value) -> maps:get(Value, Labels)
+        end,
+    ?I_MOVI(Register, ValueVal);
+compile_instruction({jumps_lt, Relative, Imm}, PC, Labels) ->
+    RelativeVal =
+        if
+            is_integer(Relative) -> Relative;
+            is_atom(Relative) -> maps:get(Relative, Labels) - PC
+        end,
+    ?I_JUMPS_LT(RelativeVal, Imm);
+compile_instruction({jumpr_ge, Relative, Imm}, PC, Labels) ->
+    RelativeVal =
+        if
+            is_integer(Relative) -> Relative;
+            is_atom(Relative) -> maps:get(Relative, Labels) - PC
+        end,
+    ?I_JUMPR_GE(RelativeVal, Imm);
+compile_instruction({jumpr_lt, Relative, Imm}, PC, Labels) ->
+    RelativeVal =
+        if
+            is_integer(Relative) -> Relative;
+            is_atom(Relative) -> maps:get(Relative, Labels) - PC
+        end,
+    ?I_JUMPR_LT(RelativeVal, Imm).
 
 %% @doc Link a binary.
 %% Append the header required by `load_binary/1,2'
