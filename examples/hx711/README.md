@@ -7,7 +7,9 @@
 ULP HX711 sample code
 =====================
 
-This sample code shows how to detect an object using a HX711 and a setup phase.
+This sample code shows how to detect an object using a
+[HX711](https://www.digikey.com/htmldatasheets/production/1836471/0/0/1/hx711.html)
+and a setup phase.
 
 The HX711 is read using ULP code (with an average of 5 measures), first with
 no object, then with an object, and a threshold is computed as the average of

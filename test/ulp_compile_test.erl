@@ -67,5 +67,31 @@ instruction_test_() ->
         ?_assertEqual(<<57, 0, 160, 112>>, ?I_LSHR(1, 2, 3)),
         ?_assertEqual(<<57, 0, 192, 112>>, ?I_RSHR(1, 2, 3)),
         ?_assertEqual(<<0, 1, 220, 27>>, ?I_WR_RTC_GPIO(9, 0)),
-        ?_assertEqual(<<9, 1, 88, 43>>, ?I_RD_RTC_GPIO(8))
+        ?_assertEqual(<<9, 1, 88, 43>>, ?I_RD_RTC_GPIO(8)),
+        ?_assertEqual(<<4, 0, 0, 128>>, ?I_BXI(1)),
+        ?_assertEqual(<<1, 0, 2, 133>>, ?I_JUMPS_LT(-1, 1)),
+        ?_assertEqual(<<1, 0, 3, 131>>, ?I_JUMPR_GE(-1, 1))
+    ].
+
+compile_test_() ->
+    [
+        ?_assertEqual({ulp:link(<<0, 0, 0, 176>>, <<>>, 0), #{}}, ulp:compile([?I_HALT])),
+        ?_assertEqual(
+            {ulp:link(<<0, 0, 0, 176>>, <<>>, 0), #{val => 0}}, ulp:compile([{label, val}, ?I_HALT])
+        ),
+        ?_assertEqual(
+            {ulp:link(<<0, 0, 0, 176>>, <<>>, 0), #{val => 1}}, ulp:compile([?I_HALT, {label, val}])
+        ),
+        ?_assertEqual(
+            {ulp:link(<<4, 0, 0, 128, 0, 0, 0, 176>>, <<>>, 0), #{addr => 1}},
+            ulp:compile([{bxi, addr}, {label, addr}, ?I_HALT])
+        ),
+        ?_assertEqual(
+            {ulp:link(<<0, 0, 64, 116, 1, 0, 2, 133>>, <<>>, 0), #{addr => 0}},
+            ulp:compile([{label, addr}, ?I_STAGE_RST, {jumps_lt, addr, 1}])
+        ),
+        ?_assertEqual(
+            {ulp:link(<<160, 2, 128, 114, 1, 0, 3, 131>>, <<>>, 0), #{addr => 0}},
+            ulp:compile([{label, addr}, ?I_MOVI(0, 42), {jumpr_ge, addr, 1}])
+        )
     ].

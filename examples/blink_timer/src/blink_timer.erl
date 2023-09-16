@@ -25,7 +25,7 @@
 
 start() ->
     % GPIO0 has a pull-up during deep sleep, so ULP program keeps it down.
-    ULPBinary = ulp:compile([
+    {ULPBinary, _Labels} = ulp:compile([
         % Turn led off
         ?I_WR_RTC_GPIO(?RTC_GPIO_LED, 0),
         % Keep it down for 1 sec
